@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.min.js"></script>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f0f0f0;
+        font-family: 'Press Start 2P', cursive;
+        margin: 0;
+        background: linear-gradient(135deg, #4a148c, #1a237e);
+        color: white;
+      }
+
+      #board {
+        display: grid;
+        grid-template-columns: repeat(8, 80px);
+        grid-template-rows: repeat(8, 80px);
+        border: 4px solid #333;
+        background-color: #444;
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        margin-bottom: 20px;
+        position: relative;
+      }
+
+      .square {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .square:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border: 2px solid;
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .white {
+        background-color: #eee;
+        color: #333;
+      }
+
+      .black {
+        background-color: #bbb;
+        color: #eee;
+      }
+
+      .selected {
+        background-color: rgba(255, 255, 0, 0.3);
+        border: 2px solid yellow;
+      }
+
+      .possible-move {
+        background-color: rgba(0, 255, 0, 0.3);
+        border: 2px solid limegreen;
+      }
+
+      .suggested-move {
+        background-color: rgba(0, 100, 200, 0.3);
+        border: 2px solid deepskyblue;
+      }
+
+      .game-controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #reset-button, #pick-color-button {
+        padding: 12px 24px;
+        font-size: 16px;
+        background: linear-gradient(to bottom, #4CAF50, #388E3C);
+        border: none;
+        color: white;
+        cursor: pointer;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+        font-family: 'Press Start 2P', cursive;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      #reset-button:hover, #pick-color-button:hover {
+        background: linear-gradient(to bottom, #66BB6A, #43A047);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        transform: translateY(-2px);
+      }
+
+      #game-status {
+        font-size: 18px;
+        margin-bottom: 20px;
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        text-align: center;
+        min-width: 200px;
+        backdrop-filter: blur(4px);
+      }
+
+      .winning-message {
+        animation: pulse 2s infinite;
+        color: limegreen;
+      }
+
+      .draw-message {
+        color: yellow;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+
+        50% {
+          transform: scale(1.1);
+        }
+
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .color-choice {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .color-button {
+        padding: 10px 20px;
+        font-size: 14px;
+        background: linear-gradient(to bottom, #fff, #ddd);
+        border: 1px solid #aaa;
+        color: #333;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        font-family: 'Press Start 2P', cursive;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      .color-button:hover {
+        background: linear-gradient(to bottom, #eee, #ccc);
+        border-color: #888;
+        transform: translateY(-2px);
+      }
+
+      .selected-color {
+        background: linear-gradient(to bottom, #81c784, #66bb6a);
+        color: white;
+        border-color: #4CAF50;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+    </style>
+</head>
+<body>
+    <div id="game-status"></div>
+    <div class="color-choice">
+      <button class="color-button" id="white-color-button">Play White</button>
+      <button class="color-button" id="black-color-button">Play Black</button>
+    </div>
+    <div id="board"></div>
+    <div class="game-controls">
+      <button id="reset-button">Reset Game</button>
+    </div>
+    <script>
+      // Initialize Tone.js
+      const moveSynth = new Tone.Synth().toDestination();
+      const captureSynth = new Tone.MembraneSynth().toDestination();
+      const gameOverSynth = new Tone.FMSynth().toDestination();
+
+      // Function to play move sound
+      function playMoveSound() {
+        moveSynth.triggerAttackRelease("C4", "8n");
+      }
+
+      // Function to play capture sound
+      function playCaptureSound() {
+        captureSynth.triggerAttackRelease("A2", "8n");
+      }
+
+      // Function to play game over sound
+      function playGameOverSound() {
+        const now = Tone.now();
+        gameOverSynth.triggerAttackRelease("C2", "8n", now);
+        gameOverSynth.triggerAttackRelease("E2", "8n", now + 0.2);
+        gameOverSynth.triggerAttackRelease("G2", "8n", now + 0.4);
+        gameOverSynth.triggerAttackRelease("C3", "1n", now + 0.6);
+      }
+
+      let board = [];
+      let currentPlayer = 'w';
+      let selectedSquare = null;
+      let gameOver = false;
+      let playerColor = 'w';
+      let computerColor = 'b';
+      let gameMode = 'playerVsComputer';
+
+      // Function to initialize the board array
+      function initializeBoard() {
+        board = [
+          ['bR', 'bN', 'bB', 'bQ', 'bK', 'bB', 'bN', 'bR'],
+          ['bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP', 'bP'],
+          ['', '', '', '', '', '', '', ''],
+          ['', '', '', '', '', '', '', ''],
+          ['', '', '', '', '', '', '', ''],
+          ['', '', '', '', '', '', '', ''],
+          ['wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP', 'wP'],
+          ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR'],
+        ];
+        gameOver = false;
+        currentPlayer = 'w';
+        selectedSquare = null;
+      }
+
+      // Function to get the correct Unicode chess symbol based on the piece string
+      function getPieceSymbol(piece) {
+        switch (piece) {
+          case 'wR':
+            return '♖';
+          case 'wN':
+            return '♘';
+          case 'wB':
+            return '♗';
+          case 'wQ':
+            return '♕';
+          case 'wK':
+            return '♔';
+          case 'wP':
+            return '♙';
+          case 'bR':
+            return '♜';
+          case 'bN':
+            return '♞';
+          case 'bB':
+            return '♝';
+          case 'bQ':
+            return '♛';
+          case 'bK':
+            return '♚';
+          case 'bP':
+            return '♟';
+          default:
+            return '';
+        }
+      }
+
+      // Function to render the board on the webpage
+      function renderBoard() {
+        const boardElement = document.getElementById('board');
+        boardElement.innerHTML = '';
+
+        for (let row = 0; row < 8; row++) {
+          for (let col = 0; col < 8; col++) {
+            const piece = board[row][col];
+            const square = document.createElement('div');
+            square.classList.add('square');
+            square.classList.add((row + col) % 2 === 0 ? 'white' : 'black');
+            square.textContent = getPieceSymbol(piece);
+
+            if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
+              square.classList.add('selected');
+            }
+
+            if (selectedSquare && isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
+              square.classList.add('possible-move');
+            }
+
+            square.addEventListener('click', () => handleSquareClick(row, col));
+            boardElement.appendChild(square);
+          }
+        }
+        updateGameStatus();
+        if (gameMode === 'playerVsComputer' && currentPlayer === computerColor && !gameOver) {
+          setTimeout(computerMove, 500);
+        }
+      }
+
+      // Function to handle a click on a square
+      function handleSquareClick(row, col) {
+        if (gameOver) return;
+
+        if (!selectedSquare) {
+          if (board[row][col] && board[row][col][0] === currentPlayer) {
+            selectedSquare = {
+              row,
+              col
+            };
+          }
+        } else {
+          if (isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
+            if (board[row][col] && board[row][col][0] !== currentPlayer) {
+              playCaptureSound();
+            } else {
+              playMoveSound();
+            }
+
+            board[row][col] = board[selectedSquare.row][selectedSquare.col];
+            board[selectedSquare.row][selectedSquare.col] = '';
+            selectedSquare = null;
+
+            if (isKingCaptured()) {
+              gameOver = true;
+              playGameOverSound();
+            } else {
+              switchPlayer();
+            }
+          } else if (board[row][col] && board[row][col][0] === currentPlayer) {
+            selectedSquare = {
+              row,
+              col
+            };
+          } else {
+            selectedSquare = null;
+          }
+        }
+        renderBoard();
+      }
+
+      function isKingCaptured() {
+        let whiteKingPresent = false;
+        let blackKingPresent = false;
+
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            if (board[r][c] === 'wK') {
+              whiteKingPresent = true;
+            } else if (board[r][c] === 'bK') {
+              blackKingPresent = true;
+            }
+          }
+        }
+        return !whiteKingPresent || !blackKingPresent;
+      }
+
+      // Function to check if a move is valid
+      function isValidMove(startRow, startCol, endRow, endCol) {
+        const piece = board[startRow][startCol];
+        const targetPiece = board[endRow][endCol];
+
+        if (startRow === endRow && startCol === endCol) {
+          return false;
+        }
+        if (targetPiece && targetPiece[0] === currentPlayer) {
+          return false;
+        }
+
+        const rowDiff = Math.abs(endRow - startRow);
+        const colDiff = Math.abs(endCol - startCol);
+
+        switch (piece[1]) {
+          case 'P':
+            const direction = currentPlayer === 'w' ? -1 : 1;
+            if (endCol === startCol && board[endRow][endCol] === '') {
+              if (endRow - startRow === direction) {
+                return true;
+              }
+              if ((startRow === 6 && currentPlayer === 'w') || (startRow === 1 && currentPlayer === 'b')) {
+                if (endRow - startRow === 2 * direction && board[startRow + direction][startCol] === '') {
+                  return true;
+                }
+              }
+            }
+            if (Math.abs(endCol - startCol) === 1 && endRow - startRow === direction) {
+              if (board[endRow][endCol] !== '' && board[endRow][endCol][0] !== currentPlayer) {
+                return true;
+              }
+            }
+            return false;
+
+          case 'R':
+            if (rowDiff === 0 || colDiff === 0) {
+              return isPathClear(startRow, startCol, endRow, endCol);
+            }
+            return false;
+
+          case 'N':
+            if ((rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2)) {
+              return true;
+            }
+            return false;
+
+          case 'B':
+            if (rowDiff === colDiff) {
+              return isPathClear(startRow, startCol, endRow, endCol);
+            }
+            return false;
+
+          case 'Q':
+            if (rowDiff === 0 || colDiff === 0 || rowDiff === colDiff) {
+              return isPathClear(startRow, startCol, endRow, endCol);
+            }
+            return false;
+
+          case 'K':
+            if (rowDiff <= 1 && colDiff <= 1) {
+              return true;
+            }
+            return false;
+
+          default:
+            return false;
+        }
+      }
+
+      function isPathClear(startRow, startCol, endRow, endCol) {
+        const rowStep = startRow === endRow ? 0 : (endRow > startRow ? 1 : -1);
+        const colStep = startCol === endCol ? 0 : (endCol > startCol ? 1 : -1);
+
+        let currentRow = startRow + rowStep;
+        let currentCol = startCol + colStep;
+
+        while (currentRow !== endRow || currentCol !== endCol) {
+          if (board[currentRow][currentCol] !== '') {
+            return false;
+          }
+          currentRow += rowStep;
+          currentCol += colStep;
+        }
+        return true;
+      }
+
+      // Function to switch the current player
+      function switchPlayer() {
+        currentPlayer = currentPlayer === 'w' ? 'b' : 'w';
+      }
+
+      function updateGameStatus() {
+        const statusElement = document.getElementById('game-status');
+        let statusText = '';
+        if (gameOver) {
+          const winningPlayer = currentPlayer === 'w' ? 'Black' : 'White';
+          statusText = `<span class="winning-message">${winningPlayer} wins!</span>`;
+        } else {
+          statusText = `Current Player: ${currentPlayer === 'w' ? 'White' : 'Black'}`;
+        }
+
+        statusElement.innerHTML = statusText;
+      }
+
+      function getBestMove() {
+        let bestMove = null;
+        let bestScore = -Infinity;
+        const possibleMoves = getAllPossibleMoves(currentPlayer);
+
+        possibleMoves.forEach(move => {
+          const tempBoard = [...board.map(row => [...row])];
+          tempBoard[move.endRow][move.endCol] = tempBoard[move.startRow][move.startCol];
+          tempBoard[move.startRow][move.startCol] = '';
+
+          const score = evaluateBoard(tempBoard, currentPlayer);
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+          }
+        });
+        return bestMove;
+      }
+
+      function getAllPossibleMoves(player) {
+        const moves = [];
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            if (board[r][c] && board[r][c][0] === player) {
+              for (let tr = 0; tr < 8; tr++) {
+                for (let tc = 0; tc < 8; tc++) {
+                  if (isValidMove(r, c, tr, tc)) {
+                    moves.push({
+                      startRow: r,
+                      startCol: c,
+                      endRow: tr,
+                      endCol: tc
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+        return moves;
+      }
+
+      function evaluateBoard(tempBoard, player) {
+        let score = 0;
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const piece = tempBoard[r][c];
+            if (piece) {
+              const pieceValue = getPieceValue(piece);
+              if (piece[0] === player) {
+                score += pieceValue;
+              } else {
+                score -= pieceValue;
+              }
+            }
+          }
+        }
+        return score;
+      }
+
+      function getPieceValue(piece) {
+        switch (piece[1]) {
+          case 'P':
+            return 1;
+          case 'R':
+            return 5;
+          case 'N':
+          case 'B':
+            return 3;
+          case 'Q':
+            return 9;
+          case 'K':
+            return 100;
+          default:
+            return 0;
+        }
+      }
+
+      function computerMove() {
+        if (gameOver) return;
+        const bestMove = getBestMove();
+
+        if (bestMove) {
+          board[bestMove.endRow][bestMove.endCol] = board[bestMove.startRow][bestMove.startCol];
+          board[bestMove.startRow][bestMove.startCol] = '';
+          playMoveSound();
+          switchPlayer();
+          renderBoard();
+        }
+      }
+
+      document.getElementById('reset-button').addEventListener('click', () => {
+        initializeBoard();
+        renderBoard();
+      });
+
+      document.getElementById('white-color-button').addEventListener('click', () => {
+        playerColor = 'w';
+        computerColor = 'b';
+        document.getElementById('white-color-button').classList.add('selected-color');
+        document.getElementById('black-color-button').classList.remove('selected-color');
+        initializeBoard();
+        renderBoard();
+        if (gameMode === 'playerVsComputer' && currentPlayer === computerColor) {
+          setTimeout(computerMove, 500);
+        }
+      });
+
+      document.getElementById('black-color-button').addEventListener('click', () => {
+        playerColor = 'b';
+        computerColor = 'w';
+        document.getElementById('black-color-button').classList.add('selected-color');
+        document.getElementById('white-color-button').classList.remove('selected-color');
+        initializeBoard();
+        renderBoard();
+        if (gameMode === 'playerVsComputer' && currentPlayer === computerColor) {
+          setTimeout(computerMove, 500);
+        }
+      });
+
+      initializeBoard();
+      renderBoard();
+      document.getElementById('white-color-button').classList.add('selected-color');
+    </script>
+</body>
+</html>
