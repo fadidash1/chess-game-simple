@@ -3,32 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Game</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <title>NEON CHESS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.min.js"></script>
     <style>
+      :root {
+        --bg-dark: #0D0D0D;
+        --neon-primary: #DA3DF5;
+        --neon-accent: #00FFF7;
+        --neon-highlight: #9400FF;
+        --text-base: #FFFFFF;
+        --text-muted: #AAAAAA;
+        --glass-bg: rgba(255, 255, 255, 0.05);
+      }
+
       body {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        background-color: #f0f0f0;
-        font-family: 'Press Start 2P', cursive;
+        background-color: var(--bg-dark);
+        font-family: 'Orbitron', sans-serif;
         margin: 0;
-        background: linear-gradient(135deg, #4a148c, #1a237e);
-        color: white;
+        color: var(--text-base);
+        overflow-x: hidden;
+      }
+
+      h1 {
+        font-family: 'Press Start 2P', cursive;
+        color: var(--neon-primary);
+        text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+        margin-bottom: 30px;
+        letter-spacing: 2px;
+        animation: flicker 3s infinite alternate;
+      }
+
+      @keyframes flicker {
+        0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+          text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary);
+        }
+        20%, 24%, 55% {
+          text-shadow: none;
+        }
       }
 
       #board {
         display: grid;
         grid-template-columns: repeat(8, 80px);
         grid-template-rows: repeat(8, 80px);
-        border: 4px solid #333;
-        background-color: #444;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+        border: 4px solid var(--neon-accent);
+        background-color: var(--glass-bg);
+        box-shadow: 0 0 20px rgba(0, 255, 247, 0.3);
         margin-bottom: 20px;
         position: relative;
+        backdrop-filter: blur(5px);
+        border-radius: 5px;
       }
 
       .square {
@@ -39,38 +69,44 @@
         justify-content: center;
         font-size: 48px;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .square::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 2px;
+        z-index: -1;
       }
 
       .square:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        border: 2px solid;
-        border-color: rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+        z-index: 2;
       }
 
       .white {
-        background-color: #eee;
-        color: #333;
+        background-color: rgba(255, 255, 255, 0.1);
+        color: var(--text-base);
       }
 
       .black {
-        background-color: #bbb;
-        color: #eee;
+        background-color: rgba(0, 0, 0, 0.3);
+        color: var(--text-base);
       }
 
       .selected {
-        background-color: rgba(255, 255, 0, 0.3);
-        border: 2px solid yellow;
+        background-color: rgba(218, 61, 245, 0.3);
+        box-shadow: 0 0 15px var(--neon-primary);
       }
 
       .possible-move {
-        background-color: rgba(0, 255, 0, 0.3);
-        border: 2px solid limegreen;
-      }
-
-      .suggested-move {
-        background-color: rgba(0, 100, 200, 0.3);
-        border: 2px solid deepskyblue;
+        background-color: rgba(0, 255, 247, 0.2);
+        box-shadow: 0 0 10px var(--neon-accent);
       }
 
       .game-controls {
@@ -80,118 +116,311 @@
         margin-top: 20px;
         margin-bottom: 20px;
         flex-direction: column;
-        gap: 10px;
+        gap: 15px;
       }
 
       #reset-button, #pick-color-button {
         padding: 12px 24px;
         font-size: 16px;
-        background: linear-gradient(to bottom, #4CAF50, #388E3C);
-        border: none;
-        color: white;
+        background: transparent;
+        border: 2px solid var(--neon-accent);
+        color: var(--neon-accent);
         cursor: pointer;
         border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 0 10px var(--neon-accent);
         transition: all 0.3s ease;
-        font-family: 'Press Start 2P', cursive;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        font-family: 'Orbitron', sans-serif;
+        font-weight: bold;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #reset-button::before, #pick-color-button::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+          to bottom right,
+          transparent,
+          transparent,
+          transparent,
+          var(--neon-accent)
+        );
+        transform: rotate(45deg);
+        transition: all 0.6s ease;
       }
 
       #reset-button:hover, #pick-color-button:hover {
-        background: linear-gradient(to bottom, #66BB6A, #43A047);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-        transform: translateY(-2px);
+        color: var(--text-base);
+        text-shadow: 0 0 5px var(--neon-accent);
+      }
+
+      #reset-button:hover::before, #pick-color-button:hover::before {
+        top: 0;
+        left: 0;
       }
 
       #game-status {
         font-size: 18px;
         margin-bottom: 20px;
-        color: white;
-        padding: 10px;
+        color: var(--text-base);
+        padding: 15px 25px;
         border-radius: 8px;
-        background-color: rgba(0, 0, 0, 0.5);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        background-color: var(--glass-bg);
+        box-shadow: 0 0 15px rgba(148, 0, 255, 0.3);
         text-align: center;
-        min-width: 200px;
-        backdrop-filter: blur(4px);
+        min-width: 300px;
+        backdrop-filter: blur(5px);
+        border: 1px solid var(--neon-highlight);
+        font-family: 'Orbitron', sans-serif;
+        font-weight: bold;
       }
 
       .winning-message {
-        animation: pulse 2s infinite;
-        color: limegreen;
+        animation: pulse 1.5s infinite, neonGlow 2s infinite alternate;
+        color: var(--neon-primary);
       }
 
       .draw-message {
-        color: yellow;
-        animation: pulse 2s infinite;
+        color: var(--neon-accent);
+        animation: pulse 1.5s infinite;
       }
 
       @keyframes pulse {
         0% {
           transform: scale(1);
         }
-
         50% {
-          transform: scale(1.1);
+          transform: scale(1.05);
         }
-
         100% {
           transform: scale(1);
         }
       }
 
+      @keyframes neonGlow {
+        from {
+          text-shadow: 0 0 5px var(--neon-primary), 0 0 10px var(--neon-primary);
+        }
+        to {
+          text-shadow: 0 0 10px var(--neon-primary), 0 0 20px var(--neon-primary), 0 0 30px var(--neon-primary);
+        }
+      }
+
       .color-choice {
         display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
+        gap: 15px;
+        margin-bottom: 30px;
       }
 
       .color-button {
-        padding: 10px 20px;
+        padding: 12px 24px;
         font-size: 14px;
-        background: linear-gradient(to bottom, #fff, #ddd);
-        border: 1px solid #aaa;
-        color: #333;
+        background: transparent;
+        border: 2px solid var(--neon-highlight);
+        color: var(--text-base);
         cursor: pointer;
         border-radius: 8px;
         transition: all 0.3s ease;
-        font-family: 'Press Start 2P', cursive;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        font-family: 'Orbitron', sans-serif;
+        font-weight: bold;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .color-button::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+          to bottom right,
+          transparent,
+          transparent,
+          transparent,
+          var(--neon-highlight)
+        );
+        transform: rotate(45deg);
+        transition: all 0.6s ease;
       }
 
       .color-button:hover {
-        background: linear-gradient(to bottom, #eee, #ccc);
-        border-color: #888;
-        transform: translateY(-2px);
+        color: var(--text-base);
+        text-shadow: 0 0 5px var(--neon-highlight);
+      }
+
+      .color-button:hover::before {
+        top: 0;
+        left: 0;
       }
 
       .selected-color {
-        background: linear-gradient(to bottom, #81c784, #66bb6a);
-        color: white;
-        border-color: #4CAF50;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        background-color: rgba(148, 0, 255, 0.2);
+        box-shadow: 0 0 15px var(--neon-highlight);
+        color: var(--neon-accent);
+      }
+
+      .piece-white {
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+      }
+
+      .piece-black {
+        text-shadow: 0 0 5px rgba(218, 61, 245, 0.7);
+      }
+
+      /* Animated background elements */
+      .bg-element {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.3;
+        z-index: -1;
+      }
+
+      .bg-element-1 {
+        width: 300px;
+        height: 300px;
+        background: var(--neon-primary);
+        top: 10%;
+        left: 10%;
+        animation: float 15s infinite ease-in-out;
+      }
+
+      .bg-element-2 {
+        width: 400px;
+        height: 400px;
+        background: var(--neon-accent);
+        bottom: 10%;
+        right: 10%;
+        animation: float 18s infinite ease-in-out reverse;
+      }
+
+      .bg-element-3 {
+        width: 200px;
+        height: 200px;
+        background: var(--neon-highlight);
+        top: 50%;
+        left: 30%;
+        animation: float 12s infinite ease-in-out;
+      }
+
+      @keyframes float {
+        0%, 100% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(50px, 50px);
+        }
+        50% {
+          transform: translate(0, 100px);
+        }
+        75% {
+          transform: translate(-50px, 50px);
+        }
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        #board {
+          grid-template-columns: repeat(8, 40px);
+          grid-template-rows: repeat(8, 40px);
+        }
+
+        .square {
+          width: 40px;
+          height: 40px;
+          font-size: 24px;
+        }
+
+        .game-controls {
+          flex-direction: column;
+        }
+
+        .color-choice {
+          flex-direction: column;
+        }
       }
     </style>
 </head>
 <body>
+    <h1>NEON CHESS</h1>
     <div id="game-status"></div>
     <div class="color-choice">
-      <button class="color-button" id="white-color-button">Play White</button>
-      <button class="color-button" id="black-color-button">Play Black</button>
+      <button class="color-button" id="white-color-button">PLAY WHITE</button>
+      <button class="color-button" id="black-color-button">PLAY BLACK</button>
     </div>
     <div id="board"></div>
     <div class="game-controls">
-      <button id="reset-button">Reset Game</button>
+      <button id="reset-button">NEW GAME</button>
     </div>
+
+    <!-- Animated background elements -->
+    <div class="bg-element bg-element-1"></div>
+    <div class="bg-element bg-element-2"></div>
+    <div class="bg-element bg-element-3"></div>
+
     <script>
       // Initialize Tone.js
-      const moveSynth = new Tone.Synth().toDestination();
-      const captureSynth = new Tone.MembraneSynth().toDestination();
-      const gameOverSynth = new Tone.FMSynth().toDestination();
+      const moveSynth = new Tone.Synth({
+        oscillator: {
+          type: "sine"
+        },
+        envelope: {
+          attack: 0.005,
+          decay: 0.1,
+          sustain: 0.1,
+          release: 0.2
+        }
+      }).toDestination();
+
+      const captureSynth = new Tone.MembraneSynth({
+        pitchDecay: 0.05,
+        octaves: 2,
+        oscillator: {
+          type: "square"
+        },
+        envelope: {
+          attack: 0.001,
+          decay: 0.2,
+          sustain: 0.1,
+          release: 0.4,
+          attackCurve: "exponential"
+        }
+      }).toDestination();
+
+      const gameOverSynth = new Tone.FMSynth({
+        harmonicity: 2.5,
+        modulationIndex: 10,
+        oscillator: {
+          type: "sine"
+        },
+        envelope: {
+          attack: 0.01,
+          decay: 0.2,
+          sustain: 0.2,
+          release: 0.5
+        },
+        modulation: {
+          type: "square"
+        },
+        modulationEnvelope: {
+          attack: 0.01,
+          decay: 0.2,
+          sustain: 0.1,
+          release: 0.3
+        }
+      }).toDestination();
 
       // Function to play move sound
       function playMoveSound() {
-        moveSynth.triggerAttackRelease("C4", "8n");
+        moveSynth.triggerAttackRelease("C5", "8n");
       }
 
       // Function to play capture sound
@@ -276,7 +505,16 @@
             const square = document.createElement('div');
             square.classList.add('square');
             square.classList.add((row + col) % 2 === 0 ? 'white' : 'black');
-            square.textContent = getPieceSymbol(piece);
+            
+            const pieceSymbol = getPieceSymbol(piece);
+            square.textContent = pieceSymbol;
+            
+            // Add color class to pieces
+            if (piece && piece[0] === 'w') {
+              square.classList.add('piece-white');
+            } else if (piece && piece[0] === 'b') {
+              square.classList.add('piece-black');
+            }
 
             if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
               square.classList.add('selected');
@@ -449,10 +687,10 @@
         const statusElement = document.getElementById('game-status');
         let statusText = '';
         if (gameOver) {
-          const winningPlayer = currentPlayer === 'w' ? 'Black' : 'White';
-          statusText = `<span class="winning-message">${winningPlayer} wins!</span>`;
+          const winningPlayer = currentPlayer === 'w' ? 'BLACK' : 'WHITE';
+          statusText = `<span class="winning-message">${winningPlayer} WINS!</span>`;
         } else {
-          statusText = `Current Player: ${currentPlayer === 'w' ? 'White' : 'Black'}`;
+          statusText = `TURN: ${currentPlayer === 'w' ? 'WHITE' : 'BLACK'}`;
         }
 
         statusElement.innerHTML = statusText;
